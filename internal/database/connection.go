@@ -9,7 +9,7 @@ import (
 )
 
 func Connect() (*sql.DB, error) {
-	db, err := sql.Open("postgres", os.Getenv("DB_SOURCE"))
+	db, err := sql.Open(os.Getenv("DB_DRIVER"), os.Getenv("DB_SOURCE"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
