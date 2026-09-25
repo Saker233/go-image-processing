@@ -21,6 +21,11 @@ type userResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type loginUserResponse struct {
+	AccessToken string `json:"access_token"`
+	User        string `json:""user`
+}
+
 func (s *Server) register(c *gin.Context) {
 	var req userRequest
 
@@ -76,6 +81,21 @@ func (s *Server) login(c *gin.Context) {
 		return
 	}
 
-	
+	jwt, err := util.GenerateJWT(user.ID, user.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
 
+	// userResp :=
+	//  rsp := loginUserResponse{
+	// 	AccessToken: jwt,
+	// 	User: user,
+	// }
+
+	rsp := loginUserResponse{
+		AccessToken: jwt,
+		User:        user.Username,
+	}
+	c.JSON(http.StatusOK, rsp)
 }
