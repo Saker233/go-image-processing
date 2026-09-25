@@ -5,6 +5,7 @@ import (
 
 	"github.com/Saker233/go-image-processing/internal/api"
 	db "github.com/Saker233/go-image-processing/internal/database"
+	"github.com/Saker233/go-image-processing/internal/util"
 
 	"github.com/joho/godotenv"
 	_ "github.com/joho/godotenv/autoload"
@@ -13,7 +14,7 @@ import (
 func main() {
 
 	godotenv.Load("app.env")
-
+	util.InitS3()
 	conn, err := db.Connect()
 	if err != nil {
 		log.Fatal(err)
