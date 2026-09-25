@@ -22,8 +22,8 @@ type userResponse struct {
 }
 
 type loginUserResponse struct {
-	AccessToken string `json:"access_token"`
-	User        string `json:""user`
+	AccessToken string       `json:"access_token"`
+	User        userResponse `json:"user"`
 }
 
 func (s *Server) register(c *gin.Context) {
@@ -51,10 +51,19 @@ func (s *Server) register(c *gin.Context) {
 		return
 	}
 
-	rsp := userResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		CreatedAt: user.CreatedAt,
+	jwtToken, err := util.GenerateJWT(user.ID, user.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	rsp := loginUserResponse{
+		AccessToken: jwtToken,
+		User: userResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			CreatedAt: user.CreatedAt,
+		},
 	}
 
 	c.JSON(http.StatusCreated, rsp)
@@ -81,21 +90,19 @@ func (s *Server) login(c *gin.Context) {
 		return
 	}
 
-	jwt, err := util.GenerateJWT(user.ID, user.Username)
+	jwtToken, err := util.GenerateJWT(user.ID, user.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	// userResp :=
-	//  rsp := loginUserResponse{
-	// 	AccessToken: jwt,
-	// 	User: user,
-	// }
-
 	rsp := loginUserResponse{
-		AccessToken: jwt,
-		User:        user.Username,
+		AccessToken: jwtToken,
+		User: userResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			CreatedAt: user.CreatedAt,
+		},
 	}
 	c.JSON(http.StatusOK, rsp)
 }

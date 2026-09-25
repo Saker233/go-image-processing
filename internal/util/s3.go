@@ -36,6 +36,33 @@ func InitS3() {
 	log.Println("S3 client initialized")
 }
 
+func UploadS3File(reader io.Reader, filename string, contentType string) (string, error) {
+	ctx := context.Background()
+
+	if s3Client == nil {
+		return "", fmt.Errorf("s3 client not initialized")
+	}
+
+	ext := filepath.Ext(filename)
+	if ext == "" {
+		ext = ".jpg"
+	}
+	key := "images/" + uuid.New().String() + ext
+
+	_, err := s3Client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		Body:        reader,
+		ContentType: aws.String(contentType),
+	})
+	if err != nil {
+		return "", fmt.Errorf("unable to upload %q to %q: %w", filename, bucket, err)
+	}
+
+	log.Printf("Successfully uploaded with key: %s", key)
+	return key, nil
+}
+
 func UploadS3() (string, error) {
 	ctx := context.Background()
 
@@ -45,22 +72,30 @@ func UploadS3() (string, error) {
 	}
 	defer file.Close()
 
-	// Generate a unique S3 key
-	key := "images/" + uuid.New().String() + ".jpg"
-
-	_, err = s3Client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   file,
-	})
-
+	key, err := UploadS3File(file, filePath, "image/jpeg")
 	if err != nil {
-		return "", fmt.Errorf("unable to upload %q to %q: %w", filePath, bucket, err)
+		return "", err
 	}
 
-	log.Printf("Successfully uploaded with key: %s", key)
-
+	_ = ctx
 	return key, nil
+}
+
+func DeleteS3Object(key string) error {
+	ctx := context.Background()
+	if s3Client == nil {
+		return fmt.Errorf("s3 client not initialized")
+	}
+
+	_, err := s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("unable to delete %q from %q: %w", key, bucket, err)
+	}
+
+	return nil
 }
 
 func DownloadS3(obj string) error {
