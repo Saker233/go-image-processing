@@ -21,6 +21,7 @@ func SetupServer(store *db.Store) {
 
 	r.GET("/health", server.getHealth)
 	r.POST("/register", server.register)
+	r.POST("/login", server.login)
 
 	r.Run(os.Getenv("PORT"))
 }

@@ -42,7 +42,7 @@ func (s *Server) register(c *gin.Context) {
 
 	user, err := s.store.CreateUser(c, args)
 	if err != nil {
-		c.JSON(http.StatusForbidden, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
@@ -53,4 +53,29 @@ func (s *Server) register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, rsp)
+}
+
+func (s *Server) login(c *gin.Context) {
+	var req userRequest
+
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := s.store.GetUserByUsername(c, req.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	err = util.CompareHashed([]byte(user.PasswordHash), []byte(req.Password))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	
+
 }
