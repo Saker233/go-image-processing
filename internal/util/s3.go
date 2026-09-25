@@ -2,9 +2,12 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"uuid"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -32,31 +35,34 @@ func InitS3() {
 	log.Println("S3 client initialized")
 }
 
-func UploadS3() {
+func UploadS3() (string, error) {
 	ctx := context.Background()
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Printf("Unable to open file %q: %v", filePath, err)
-		return
+		return "", fmt.Errorf("unable to open file %q: %w", filePath, err)
 	}
 	defer file.Close()
 
+	// Generate a unique S3 key
+	key := "images/" + uuid.New().String() + ".jpg"
+
 	_, err = s3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
-		Key:    aws.String(filePath),
+		Key:    aws.String(key),
 		Body:   file,
 	})
 
 	if err != nil {
-		log.Printf("Unable to upload %q to %q: %v", filePath, bucket, err)
-		return
+		return "", fmt.Errorf("unable to upload %q to %q: %w", filePath, bucket, err)
 	}
 
-	log.Println("Successfully uploaded!")
+	log.Printf("Successfully uploaded with key: %s", key)
+
+	return key, nil
 }
 
-func DownloadS3(obj string) {
+func DownloadS3(obj string) error {
 	ctx := context.Background()
 
 	result, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
@@ -64,23 +70,25 @@ func DownloadS3(obj string) {
 		Key:    aws.String(obj),
 	})
 	if err != nil {
-		log.Printf("Unable to download %q: %v", obj, err)
-		return
+		return fmt.Errorf("unable to download %q: %w", obj, err)
 	}
 	defer result.Body.Close()
 
-	file, err := os.Create(dir + obj)
+	filename := filepath.Base(obj)
+	localPath := filepath.Join(dir, filename)
+
+	file, err := os.Create(localPath)
 	if err != nil {
-		log.Printf("Unable to create file: %v", err)
-		return
+		return fmt.Errorf("unable to create file %q: %w", localPath, err)
 	}
 	defer file.Close()
 
 	_, err = io.Copy(file, result.Body)
 	if err != nil {
-		log.Printf("Unable to save downloaded file: %v", err)
-		return
+		return fmt.Errorf("unable to save downloaded file: %w", err)
 	}
 
-	log.Printf("Successfully downloaded %q", obj)
+	log.Printf("Successfully downloaded %q to %q", obj, localPath)
+
+	return nil
 }
